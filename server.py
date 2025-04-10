@@ -29,5 +29,7 @@ def dashboard():
 def data():
     return jsonify(mqtt_data)
 
+# ใช้ Gunicorn หรือให้ Flask ใช้งานได้บนเครื่องจริง
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    # ไม่ต้องใช้ app.run() เมื่อใช้ Gunicorn
+    pass
