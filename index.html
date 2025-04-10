@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Factory Dashboard</title>
+    <style>
+        body { font-family: Arial; text-align: center; padding: 50px; }
+        .data { font-size: 24px; margin: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Smart Factory Dashboard</h1>
+    <div class="data" id="temp">Temperature: -- °C</div>
+    <div class="data" id="hum">Humidity: -- %</div>
+    <div class="data" id="pm">PM2.5: -- µg/m³</div>
+
+    <script>
+        function updateData() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("temp").innerText = "Temperature: " + data.temperature + " °C";
+                    document.getElementById("hum").innerText = "Humidity: " + data.humidity + " %";
+                    document.getElementById("pm").innerText = "PM2.5: " + data.pm25 + " µg/m³";
+                });
+        }
+        setInterval(updateData, 3000);
+        updateData();
+    </script>
+</body>
+</html>
