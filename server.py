@@ -18,7 +18,9 @@ def on_message(client, userdata, msg):
 mqtt_client = mqtt.Client()
 mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message
-mqtt_client.connect("broker.hivemq.com", 1883)
+
+# เชื่อมต่อ MQTT Broker
+mqtt_client.connect("broker.hivemq.com", 1883, 60)
 mqtt_client.loop_start()
 
 @app.route("/")
@@ -29,7 +31,6 @@ def dashboard():
 def data():
     return jsonify(mqtt_data)
 
-# ใช้ Gunicorn หรือให้ Flask ใช้งานได้บนเครื่องจริง
+# ไม่ต้องใช้ app.run() เมื่อใช้ Gunicorn
 if __name__ == "__main__":
-    # ไม่ต้องใช้ app.run() เมื่อใช้ Gunicorn
     pass
