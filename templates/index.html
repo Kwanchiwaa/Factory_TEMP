@@ -7,10 +7,34 @@
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.1/dist/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        .gauge-container { width: 300px; display: inline-block; margin: 20px; }
-        #chartContainer { width: 70%; margin: auto; }
-        .val-text { font-size: 20px; margin-top: 10px; }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-image: url('https://lirp.cdn-website.com/4246b69b/dms3rep/multi/opt/311481437_5917190921659614_5496119210462098327_n-640w.jpg');
+            background-size: cover;   /* ให้ภาพขยายเต็มหน้าจอ */
+            background-position: center center;  /* จัดภาพให้อยู่ตรงกลาง */
+        }
+
+        .gauge-container {
+            width: 300px;
+            display: inline-block;
+            margin: 20px;
+        }
+
+        #chartContainer {
+            width: 70%;
+            margin: auto;
+        }
+
+        .val-text {
+            font-size: 20px;
+            margin-top: 10px;
+        }
+
+        #uploadBg {
+            margin: 20px;
+            padding: 5px;
+        }
     </style>
 </head>
 <body>
@@ -35,8 +59,12 @@
         <canvas id="sensorChart"></canvas>
     </div>
 
+    <!-- ตัวเลือกอัพโหลดภาพพื้นหลัง -->
+    <input type="file" id="uploadBg" accept="image/*">
+
     <script>
-        const socket = io.connect('http://localhost:5000');  // เชื่อมต่อกับเซิร์ฟเวอร์
+        // เชื่อมต่อกับเซิร์ฟเวอร์ผ่าน socket.io
+        const socket = io.connect('http://localhost:5000');
 
         // ตัวแปรสำหรับเก็บข้อมูลล่าสุดที่รับจากเซ็นเซอร์
         let temperatureData = [];
@@ -106,6 +134,23 @@
 
             sensorChart.update();
         });
+
+        // ฟังก์ชันอัพโหลดรูปภาพพื้นหลัง
+        document.getElementById('uploadBg').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    document.body.style.backgroundImage = `url(${event.target.result})`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // ฟังก์ชันให้กราฟอัพเดตทุกๆ 1 นาที
+        setInterval(() => {
+            socket.emit('request_sensor_data');  // ส่งคำขอให้เซิร์ฟเวอร์ส่งข้อมูลใหม่
+        }, 60000);  // ทุกๆ 60000 มิลลิวินาที (1 นาที)
     </script>
 </body>
 </html>
