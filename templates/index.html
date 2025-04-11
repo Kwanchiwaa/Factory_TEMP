@@ -1,111 +1,152 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Factory Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.1/dist/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        .gauge-container { width: 300px; display: inline-block; margin: 20px; }
-        #chartContainer { width: 70%; margin: auto; }
-        .val-text { font-size: 20px; margin-top: 10px; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Smart Factory Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.1/dist/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@berniw/gauge-chart@1.0.6/dist/gauge.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-size: cover;
+      background-position: center;
+      transition: background-image 0.5s ease-in-out;
+    }
+    .gauge-container {
+      width: 300px;
+      display: inline-block;
+      margin: 20px;
+    }
+    #chartContainer {
+      width: 90%;
+      margin: auto;
+    }
+    canvas {
+      background: white;
+      border-radius: 10px;
+    }
+  </style>
 </head>
 <body>
-    <h1>Smart Factory Dashboard</h1>
 
-    <div class="gauge-container">
-        <h3>Temperature</h3>
-        <div id="tempVal" class="val-text">-- °C</div>
-    </div>
+  <h1>Smart Factory Dashboard</h1>
+  <input type="file" id="uploadBg" accept="image/*"><br><br>
 
-    <div class="gauge-container">
-        <h3>Humidity</h3>
-        <div id="humVal" class="val-text">-- %</div>
-    </div>
+  <!-- Gauges -->
+  <div class="gauge-container">
+    <h3>Temperature (°C)</h3>
+    <canvas id="tempGauge"></canvas>
+  </div>
+  <div class="gauge-container">
+    <h3>Humidity (%)</h3>
+    <canvas id="humGauge"></canvas>
+  </div>
+  <div class="gauge-container">
+    <h3>PM2.5 (µg/m³)</h3>
+    <canvas id="pmGauge"></canvas>
+  </div>
 
-    <div class="gauge-container">
-        <h3>PM2.5</h3>
-        <div id="pmVal" class="val-text">-- µg/m³</div>
-    </div>
+  <!-- Line Graph -->
+  <div id="chartContainer">
+    <canvas id="sensorChart"></canvas>
+  </div>
 
-    <div id="chartContainer">
-        <canvas id="sensorChart"></canvas>
-    </div>
+  <script>
+    const socket = io.connect('http://localhost:5000');
 
-    <script>
-        const socket = io.connect('http://localhost:5000');  // เชื่อมต่อกับเซิร์ฟเวอร์
+    const tempGauge = new Gauge(document.getElementById("tempGauge")).setOptions({ lineWidth: 0.2, colorStart: "#FFA07A", colorStop: "#FF4500", strokeColor: "#eee" });
+    tempGauge.maxValue = 50; tempGauge.setMinValue(0); tempGauge.animationSpeed = 32; tempGauge.set(0);
 
-        // ตัวแปรสำหรับเก็บข้อมูลล่าสุดที่รับจากเซ็นเซอร์
-        let temperatureData = [];
-        let humidityData = [];
-        let pmData = [];
+    const humGauge = new Gauge(document.getElementById("humGauge")).setOptions({ lineWidth: 0.2, colorStart: "#87CEFA", colorStop: "#1E90FF", strokeColor: "#eee" });
+    humGauge.maxValue = 100; humGauge.setMinValue(0); humGauge.animationSpeed = 32; humGauge.set(0);
 
-        // สร้างกราฟด้วย Chart.js
-        const ctx = document.getElementById('sensorChart').getContext('2d');
-        const sensorChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],  // เวลา หรือช่วงเวลาที่ข้อมูลถูกบันทึก
-                datasets: [{
-                    label: 'Temperature (°C)',
-                    data: temperatureData,
-                    borderColor: 'rgb(255, 99, 132)',
-                    fill: false
-                }, {
-                    label: 'Humidity (%)',
-                    data: humidityData,
-                    borderColor: 'rgb(54, 162, 235)',
-                    fill: false
-                }, {
-                    label: 'PM2.5 (µg/m³)',
-                    data: pmData,
-                    borderColor: 'rgb(75, 192, 192)',
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                    },
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
+    const pmGauge = new Gauge(document.getElementById("pmGauge")).setOptions({ lineWidth: 0.2, colorStart: "#B0E57C", colorStop: "#32CD32", strokeColor: "#eee" });
+    pmGauge.maxValue = 500; pmGauge.setMinValue(0); pmGauge.animationSpeed = 32; pmGauge.set(0);
 
-        // เมื่อรับข้อมูลจาก server ผ่าน socket.io
-        socket.on('sensor_update', (data) => {
-            const temp = data.temperature || 0;
-            const hum = data.humidity || 0;
-            const pm = data.pm || 0;
-            const time = Date.now();
+    const chartCtx = document.getElementById('sensorChart').getContext('2d');
+    const chartLabels = [];
+    const temperatureData = [];
+    const humidityData = [];
+    const pmData = [];
 
-            // แสดงผลข้อมูลในตัวเลข
-            document.getElementById("tempVal").innerText = `${temp} °C`;
-            document.getElementById("humVal").innerText = `${hum} %`;
-            document.getElementById("pmVal").innerText = `${pm} µg/m³`;
+    const sensorChart = new Chart(chartCtx, {
+      type: 'line',
+      data: {
+        labels: chartLabels,
+        datasets: [
+          { label: 'Temperature (°C)', data: temperatureData, borderColor: 'red', fill: false },
+          { label: 'Humidity (%)', data: humidityData, borderColor: 'blue', fill: false },
+          { label: 'PM2.5 (µg/m³)', data: pmData, borderColor: 'green', fill: false }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: { title: { display: true, text: 'Time' }, ticks: { autoSkip: true } },
+          y: { beginAtZero: true }
+        }
+      }
+    });
 
-            // เพิ่มข้อมูลใหม่ในกราฟ
-            sensorChart.data.labels.push(time);  // เพิ่มเวลา
-            sensorChart.data.datasets[0].data.push(temp);  // อุณหภูมิ
-            sensorChart.data.datasets[1].data.push(hum);  // ความชื้น
-            sensorChart.data.datasets[2].data.push(pm);   // PM2.5
+    let lastUpdateMinute = null;
 
-            // กำหนดให้กราฟไม่เก็บข้อมูลเกินไป (รักษาขนาดของกราฟให้เหมาะสม)
-            if (sensorChart.data.labels.length > 50) {
-                sensorChart.data.labels.shift();
-                sensorChart.data.datasets.forEach(dataset => dataset.data.shift());
-            }
+    socket.on('sensor_update', (data) => {
+      const temp = parseFloat(data.temperature || 0);
+      const hum = parseFloat(data.humidity || 0);
+      const pm = parseFloat(data.pm || 0);
+      const now = new Date();
+      const minute = now.getMinutes();
 
-            sensorChart.update();
-        });
-    </script>
+      // Update Gauges
+      tempGauge.set(temp);
+      humGauge.set(hum);
+      pmGauge.set(pm);
+
+      // Update chart every 1 minute
+      if (minute !== lastUpdateMinute) {
+        lastUpdateMinute = minute;
+        const label = now.toLocaleTimeString();
+
+        chartLabels.push(label);
+        temperatureData.push(temp);
+        humidityData.push(hum);
+        pmData.push(pm);
+
+        if (chartLabels.length > 30) {
+          chartLabels.shift();
+          temperatureData.shift();
+          humidityData.shift();
+          pmData.shift();
+        }
+
+        sensorChart.update();
+      }
+    });
+
+    <!-- Input for uploading an image -->
+<input type="file" id="uploadBg" accept="image/*"><br><br>
+
+<script>
+  // Change background image when file is selected
+  document.getElementById('uploadBg').addEventListener('change', (e) => {
+    const file = e.target.files[0];  // เลือกไฟล์จากเครื่อง
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        // เปลี่ยนพื้นหลังเป็นไฟล์ที่เลือก
+        document.body.style.backgroundImage = `url(${event.target.result})`;
+        document.body.style.backgroundSize = 'cover';  // ให้ภาพขยายเต็มหน้าจอ
+        document.body.style.backgroundPosition = 'center center';  // จัดภาพให้อยู่กลาง
+      };
+      reader.readAsDataURL(file);  // อ่านไฟล์ที่เลือกเป็น base64
+    }
+  });
+</script>
+
+    });
+  </script>
+
 </body>
 </html>
