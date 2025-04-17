@@ -1,61 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Sensor Dashboard</title>
-  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+  <title>Real-time Sensor Dashboard</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #f9f9f9; }
+    canvas { max-width: 600px; margin: 20px auto; }
+  </style>
 </head>
 <body>
-  <h2>Real-time Sensor Dashboard</h2>
-  <canvas id="temperatureChart"></canvas>
-  <canvas id="humidityChart"></canvas>
+  <h1>Real-time Sensor Dashboard</h1>
+  
+  <canvas id="tempChart"></canvas>
+  <canvas id="humChart"></canvas>
   <canvas id="pmChart"></canvas>
 
-<script>
-  const socket = io();
+  <script>
+    const socket = io();
 
-  // สร้าง Chart
-  const tempCtx = document.getElementById('temperatureChart').getContext('2d');
-  const tempChart = new Chart(tempCtx, {
-    type: 'line',
-    data: { labels: [], datasets: [{ label: 'Temperature (°C)', data: [], borderColor: 'red', borderWidth: 2 }] }
-  });
+    // Chart setup
+    const tempCtx = document.getElementById('tempChart').getContext('2d');
+    const humCtx = document.getElementById('humChart').getContext('2d');
+    const pmCtx = document.getElementById('pmChart').getContext('2d');
 
-  const humCtx = document.getElementById('humidityChart').getContext('2d');
-  const humChart = new Chart(humCtx, {
-    type: 'line',
-    data: { labels: [], datasets: [{ label: 'Humidity (%)', data: [], borderColor: 'blue', borderWidth: 2 }] }
-  });
+    const tempData = { labels: [], datasets: [{ label: 'Temperature (°C)', data: [], borderColor: 'red', fill: false }] };
+    const humData = { labels: [], datasets: [{ label: 'Humidity (%)', data: [], borderColor: 'blue', fill: false }] };
+    const pmData = { labels: [], datasets: [{ label: 'PM2.5 (μg/m³)', data: [], borderColor: 'green', fill: false }] };
 
-  const pmCtx = document.getElementById('pmChart').getContext('2d');
-  const pmChart = new Chart(pmCtx, {
-    type: 'line',
-    data: { labels: [], datasets: [{ label: 'PM2.5 (ug/m³)', data: [], borderColor: 'green', borderWidth: 2 }] }
-  });
+    const tempChart = new Chart(tempCtx, { type: 'line', data: tempData });
+    const humChart = new Chart(humCtx, { type: 'line', data: humData });
+    const pmChart = new Chart(pmCtx, { type: 'line', data: pmData });
 
-  socket.on('sensor_data', function(data) {
-    const time = new Date().toLocaleTimeString();
-    if (data.topic === 'sensor/temperature') {
-      tempChart.data.labels.push(time);
-      tempChart.data.datasets[0].data.push(parseFloat(data.value));
+    // เมื่อได้รับข้อมูลจาก server
+    socket.on('sensor_data', function(data) {
+      const timestamp = new Date().toLocaleTimeString();
+
+      // Update temp
+      tempData.labels.push(timestamp);
+      tempData.datasets[0].data.push(data.temperature);
+      if (tempData.labels.length > 10) {
+        tempData.labels.shift();
+        tempData.datasets[0].data.shift();
+      }
       tempChart.update();
-    }
-    if (data.topic === 'sensor/humidity') {
-      humChart.data.labels.push(time);
-      humChart.data.datasets[0].data.push(parseFloat(data.value));
-      humChart.update();
-    }
-    if (data.topic === 'sensor/pm25') {
-      pmChart.data.labels.push(time);
-      pmChart.data.datasets[0].data.push(parseInt(data.value));
-      pmChart.update();
-    }
-  });
-</script>
-</body>
-</html>
 
-    setInterval(updateData, 2000); // Update every 2 seconds
+      // Update hum
+      humData.labels.push(timestamp);
+      humData.datasets[0].data.push(data.humidity);
+      if (humData.labels.length > 10) {
+        humData.labels.shift();
+        humData.datasets[0].data.shift();
+      }
+      humChart.update();
+
+      // Update pm2.5
+      pmData.labels.push(timestamp);
+      pmData.datasets[0].data.push(data.pm25);
+      if (pmData.labels.length > 10) {
+        pmData.labels.shift();
+        pmData.datasets[0].data.shift();
+      }
+      pmChart.update();
+    });
   </script>
 </body>
 </html>
