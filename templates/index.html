@@ -1,142 +1,92 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Real-Time Sensor Dashboard</title>
-  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gaugeJS/dist/gauge.min.js"></script>
-  <style>
-    body { font-family: sans-serif; text-align: center; background: #f0f0f0; }
-    h1 { margin: 20px 0; }
-    .dashboard { display: flex; flex-direction: column; align-items: center; gap: 40px; margin: 20px auto; }
-    .chart-container { width: 600px; height: 260px; }
-    .gauge-group { display: flex; justify-content: center; gap: 80px; flex-wrap: wrap; }
-    .gauge-container { width: 180px; height: 180px; }
-    .value-label { font-size: 18px; margin-top: 10px; }
-    .gauge-label { font-size: 16px; font-weight: bold; margin-top: 10px; }
-    canvas { background: white; border-radius: 12px; padding: 5px; }
-  </style>
-</head>
-<body>
+const socket = io.connect();
 
-<h1>Real-Time Sensor Dashboard</h1>
-
-<div class="dashboard">
-  <div class="chart-container">
-    <canvas id="sensorChart"></canvas>
-  </div>
-
-  <div class="gauge-group">
-    <div class="gauge-container">
-      <div class="gauge-label">Temperature</div>
-      <canvas id="tempGauge"></canvas>
-      <div class="value-label" id="temperature">0 °C</div>
-    </div>
-    <div class="gauge-container">
-      <div class="gauge-label">Humidity</div>
-      <canvas id="humiGauge"></canvas>
-      <div class="value-label" id="humidity">0 %</div>
-    </div>
-    <div class="gauge-container">
-      <div class="gauge-label">PM2.5</div>
-      <canvas id="pmGauge"></canvas>
-      <div class="value-label" id="pm25">0 µg/m³</div>
-    </div>
-  </div>
-</div>
-
-<script>
-  const socket = io.connect();
-
-  // Chart.js (3 เส้น)
-  const sensorChart = new Chart(document.getElementById('sensorChart'), {
-    type: 'line',
-    data: {
-      labels: [],
-      datasets: [
-        { label: 'Temperature (°C)', data: [], borderColor: 'red', fill: false, pointRadius: 0, tension: 0.3 },
-        { label: 'Humidity (%)', data: [], borderColor: 'blue', fill: false, pointRadius: 0, tension: 0.3 },
-        { label: 'PM2.5 (µg/m³)', data: [], borderColor: 'green', fill: false, pointRadius: 0, tension: 0.3 }
-      ]
-    },
-    options: {
-      animation: false,
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { display: true },
-        y: { beginAtZero: true }
+// Chart.js แบบเรียลไทม์
+const sensorChart = new Chart(document.getElementById('sensorChart'), {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [
+      { label: 'Temperature (°C)', data: [], borderColor: 'red', fill: false, pointRadius: 0 },
+      { label: 'Humidity (%)', data: [], borderColor: 'blue', fill: false, pointRadius: 0 },
+      { label: 'PM2.5 (µg/m³)', data: [], borderColor: 'green', fill: false, pointRadius: 0 }
+    ]
+  },
+  options: {
+    animation: false,
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        display: true,
+        title: { display: true, text: 'Time' }
       },
-      plugins: {
-        legend: { labels: { boxWidth: 12 } }
+      y: {
+        beginAtZero: true
       }
+    },
+    plugins: {
+      legend: { labels: { boxWidth: 12 } }
     }
-  });
+  }
+});
 
-  // เกจ 3 ตัว
-  function createGauge(canvas, min, max) {
-    const opts = {
-      angle: 0,
-      lineWidth: 0.2,
-      radiusScale: 0.9,
-      pointer: { length: 0.6, color: '#333' },
-      limitMax: true,
-      limitMin: true,
-      colorStart: '#6FADCF',
-      colorStop: '#8FC0DA',
-      strokeColor: '#E0E0E0',
-      highDpiSupport: true
-    };
-    const gauge = new Gauge(canvas).setOptions(opts);
-    gauge.maxValue = max;
-    gauge.setMinValue(min);
-    gauge.animationSpeed = 32;
-    gauge.set(0);
-    return gauge;
+// เกจ 3 ตัว
+function createGauge(canvas, min, max) {
+  const opts = {
+    angle: 0,
+    lineWidth: 0.2,
+    radiusScale: 0.9,
+    pointer: { length: 0.6, color: '#333' },
+    limitMax: true,
+    limitMin: true,
+    colorStart: '#6FADCF',
+    colorStop: '#8FC0DA',
+    strokeColor: '#E0E0E0',
+    highDpiSupport: true
+  };
+  const gauge = new Gauge(canvas).setOptions(opts);
+  gauge.maxValue = max;
+  gauge.setMinValue(min);
+  gauge.animationSpeed = 32;
+  gauge.set(0);
+  return gauge;
+}
+
+const tempGauge = createGauge(document.getElementById('tempGauge'), 0, 50);
+const humiGauge = createGauge(document.getElementById('humiGauge'), 0, 100);
+const pmGauge = createGauge(document.getElementById('pmGauge'), 0, 300);
+
+// อัปเดตข้อมูลเมื่อรับจาก MQTT ผ่าน SocketIO
+socket.on('sensor_data', function(data) {
+  console.log("Received Data: ", data);
+
+  const tempValue = data.temperature;
+  const humiValue = data.humidity;
+  const pmValue = data.pm25;
+
+  // อัปเดตตัวเลข
+  document.getElementById('temperature').innerText = tempValue + " °C";
+  document.getElementById('humidity').innerText = humiValue + " %";
+  document.getElementById('pm25').innerText = pmValue + " µg/m³";
+
+  // อัปเดตเกจ
+  tempGauge.set(tempValue);
+  humiGauge.set(humiValue);
+  pmGauge.set(pmValue);
+
+  // อัปเดตกราฟ
+  const now = new Date().toLocaleTimeString();
+  const chartData = sensorChart.data;
+
+  if (chartData.labels.length > 20) {
+    chartData.labels.shift();
+    chartData.datasets.forEach(ds => ds.data.shift());
   }
 
-  const tempGauge = createGauge(document.getElementById('tempGauge'), 0, 50);
-  const humiGauge = createGauge(document.getElementById('humiGauge'), 0, 100);
-  const pmGauge = createGauge(document.getElementById('pmGauge'), 0, 300);
+  chartData.labels.push(now);
+  chartData.datasets[0].data.push(tempValue);
+  chartData.datasets[1].data.push(humiValue);
+  chartData.datasets[2].data.push(pmValue);
 
-  // ค่าล่าสุด
-  let tempValue = 0, humiValue = 0, pmValue = 0;
-
-  // รับข้อมูล socket
-  socket.on('sensor_data', function(data) {
-    console.log("Received Data: ", data);
-
-    // อัปเดตตัวแปร
-    tempValue = data.temperature;
-    humiValue = data.humidity;
-    pmValue = data.pm25;
-
-    // อัปเดตเกจ
-    tempGauge.set(tempValue);
-    humiGauge.set(humiValue);
-    pmGauge.set(pmValue);
-
-    document.getElementById('temperature').innerText = tempValue + " °C";
-    document.getElementById('humidity').innerText = humiValue + " %";
-    document.getElementById('pm25').innerText = pmValue + " µg/m³";
-
-    // อัปเดตกราฟ
-    const now = new Date().toLocaleTimeString();
-
-    if (sensorChart.data.labels.length > 30) {
-      sensorChart.data.labels.shift();
-      sensorChart.data.datasets.forEach(ds => ds.data.shift());
-    }
-
-    sensorChart.data.labels.push(now);
-    sensorChart.data.datasets[0].data.push(tempValue);
-    sensorChart.data.datasets[1].data.push(humiValue);
-    sensorChart.data.datasets[2].data.push(pmValue);
-
-    sensorChart.update();
-  });
-</script>
-
-</body>
-</html>
+  sensorChart.update();
+});
