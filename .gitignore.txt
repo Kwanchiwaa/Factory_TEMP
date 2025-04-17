@@ -1,3 +1,41 @@
 __pycache__/
 .env
 *.pyc
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+*.db
+*.sqlite3
+
+# Flask
+instance/
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+*.db
+*.sqlite3
+
+# Virtual Environment
+venv/
+env/
+.venv/
+ENV/
+
+# Flask-SocketIO
+.sock/
+
+# IDE Files
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
