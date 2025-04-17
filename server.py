@@ -3,7 +3,7 @@ from flask_socketio import SocketIO, emit
 import paho.mqtt.client as mqtt
 import ssl
 import json
-import os  # เพิ่ม import os
+import os
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")  # รองรับ cross-origin
@@ -36,10 +36,6 @@ def dashboard():
     return render_template("index.html")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # ดึง PORT จาก environment ถ้าไม่มีใช้ 5000
+    port = int(os.environ.get("PORT", 5000))  # ดึง port จาก Render
     socketio.run(app, host="0.0.0.0", port=port)
 
-    return render_template("index.html")
-
-if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=10000)
