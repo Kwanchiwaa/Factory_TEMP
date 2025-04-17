@@ -1,71 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Real-Time Sensor Data</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Real-Time Dashboard</title>
   <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { text-align: center; font-family: sans-serif; }
-    canvas { max-width: 600px; margin: 20px auto; }
-    .gauge { font-size: 1.5em; margin: 10px; }
+    body { font-family: sans-serif; text-align: center; }
+    .container { display: flex; flex-wrap: wrap; justify-content: center; }
+    canvas, .gauge { margin: 10px; }
+    .gauge-value { font-size: 20px; margin-top: 5px; }
   </style>
 </head>
 <body>
-  <h1>Real-Time Sensor Data</h1>
-  
-  <div class="gauge">Temperature: <span id="temperature">N/A</span> °C</div>
-  <div class="gauge">Humidity: <span id="humidity">N/A</span> %</div>
-  <div class="gauge">PM2.5: <span id="pm25">N/A</span> µg/m³</div>
-  
-  <canvas id="sensorChart"></canvas>
+  <h1>Real-Time Sensor Dashboard</h1>
+
+  <div class="container">
+    <div>
+      <canvas id="tempGauge" width="150" height="150"></canvas>
+      <div class="gauge-value" id="tempValue">0°C</div>
+    </div>
+    <div>
+      <canvas id="humiGauge" width="150" height="150"></canvas>
+      <div class="gauge-value" id="humiValue">0%</div>
+    </div>
+    <div>
+      <canvas id="pmGauge" width="150" height="150"></canvas>
+      <div class="gauge-value" id="pmValue">0 µg/m³</div>
+    </div>
+  </div>
+
+  <canvas id="lineChart" width="600" height="300"></canvas>
 
   <script>
-    const ctx = document.getElementById('sensorChart').getContext('2d');
-    const chart = new Chart(ctx, {
-      type: 'line',
+    const socket = io.connect();
+
+    // Data storage
+    let labels = [];
+    let tempData = [];
+    let humiData = [];
+    let pmData = [];
+
+    // Line chart
+    const ctx = document.getElementById("lineChart").getContext("2d");
+    const lineChart = new Chart(ctx, {
+      type: "line",
       data: {
-        labels: [],
+        labels: labels,
         datasets: [
-          { label: 'Temperature (°C)', data: [], borderColor: 'red', fill: false },
-          { label: 'Humidity (%)', data: [], borderColor: 'blue', fill: false },
-          { label: 'PM2.5 (µg/m³)', data: [], borderColor: 'green', fill: false }
+          { label: "Temperature (°C)", borderColor: "red", data: tempData, fill: false },
+          { label: "Humidity (%)", borderColor: "blue", data: humiData, fill: false },
+          { label: "PM2.5 (µg/m³)", borderColor: "green", data: pmData, fill: false },
         ]
       },
       options: {
         responsive: true,
         animation: false,
-        scales: { x: { display: false }, y: { beginAtZero: true } }
+        scales: { x: { title: { display: true, text: "Time" } } }
       }
     });
 
-    const socket = io.connect();
+    // Gauges
+    const tempGaugeCtx = document.getElementById("tempGauge").getContext("2d");
+    const humiGaugeCtx = document.getElementById("humiGauge").getContext("2d");
+    const pmGaugeCtx = document.getElementById("pmGauge").getContext("2d");
 
-    socket.on('sensor_data', function(data) {
-      const time = new Date().toLocaleTimeString();
+    function createGauge(ctx, color, max) {
+      return new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: ["Value", "Remaining"],
+          datasets: [{
+            data: [0, max],
+            backgroundColor: [color, "#eee"],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          rotation: -90,
+          circumference: 180,
+          cutout: "70%",
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
 
-      if (data.topic === 'sensor/temperature') {
-        document.getElementById('temperature').innerText = data.value;
-        chart.data.labels.push(time);
-        chart.data.datasets[0].data.push(data.value);
-      }
-      if (data.topic === 'sensor/humidity') {
-        document.getElementById('humidity').innerText = data.value;
-        chart.data.datasets[1].data.push(data.value);
-      }
-      if (data.topic === 'sensor/pm25') {
-        document.getElementById('pm25').innerText = data.value;
-        chart.data.datasets[2].data.push(data.value);
-      }
+    const tempGauge = createGauge(tempGaugeCtx, "red", 50);
+    const humiGauge = createGauge(humiGaugeCtx, "blue", 100);
+    const pmGauge = createGauge(pmGaugeCtx, "green", 500);
 
-      if (chart.data.labels.length > 20) {
-        chart.data.labels.shift();
-        chart.data.datasets.forEach(dataset => dataset.data.shift());
-      }
+    socket.on("sensor_data", (data) => {
+      const timeLabel = new Date().toLocaleTimeString();
 
-      chart.update();
+      labels.push(timeLabel);
+      if (labels.length > 20) labels.shift();
+
+      tempData.push(data.temperature);
+      humiData.push(data.humidity);
+      pmData.push(data.pm25);
+      if (tempData.length > 20) tempData.shift();
+      if (humiData.length > 20) humiData.shift();
+      if (pmData.length > 20) pmData.shift();
+
+      // Update line chart
+      lineChart.update();
+
+      // Update gauges
+      tempGauge.data.datasets[0].data[0] = data.temperature;
+      tempGauge.data.datasets[0].data[1] = 50 - data.temperature;
+      tempGauge.update();
+      document.getElementById("tempValue").innerText = data.temperature + "°C";
+
+      humiGauge.data.datasets[0].data[0] = data.humidity;
+      humiGauge.data.datasets[0].data[1] = 100 - data.humidity;
+      humiGauge.update();
+      document.getElementById("humiValue").innerText = data.humidity + "%";
+
+      pmGauge.data.datasets[0].data[0] = data.pm25;
+      pmGauge.data.datasets[0].data[1] = 500 - data.pm25;
+      pmGauge.update();
+      document.getElementById("pmValue").innerText = data.pm25 + " µg/m³";
     });
   </script>
 </body>
 </html>
-
