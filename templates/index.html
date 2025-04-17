@@ -29,11 +29,12 @@
     .gauge-group {
       display: flex;
       justify-content: center;
-      gap: 40px;
+      gap: 80px; /* เพิ่มระยะห่างระหว่างเกจ */
       flex-wrap: wrap;
     }
     .gauge-container {
-      width: 160px;
+      width: 180px; /* ปรับขนาดเกจให้กว้างขึ้น */
+      height: 160px; /* เพิ่มขนาดความสูงของเกจ */
     }
     .value-label {
       font-size: 18px;
@@ -130,23 +131,17 @@
 
   // อัปเดตข้อมูลจาก MQTT
   socket.on('sensor_data', function(data) {
-    const value = parseFloat(data.value);
+    const tempValue = data.temperature;
+    const humiValue = data.humidity;
+    const pmValue = data.pm25;
 
-    if (data.topic === 'sensor/temperature') {
-      tempValue = value;
-      document.getElementById('temperature').innerText = value + " °C";
-      tempGauge.set(value);
-    }
-    else if (data.topic === 'sensor/humidity') {
-      humiValue = value;
-      document.getElementById('humidity').innerText = value + " %";
-      humiGauge.set(value);
-    }
-    else if (data.topic === 'sensor/pm25') {
-      pmValue = value;
-      document.getElementById('pm25').innerText = value + " µg/m³";
-      pmGauge.set(value);
-    }
+    document.getElementById('temperature').innerText = tempValue + " °C";
+    document.getElementById('humidity').innerText = humiValue + " %";
+    document.getElementById('pm25').innerText = pmValue + " µg/m³";
+
+    tempGauge.set(tempValue);
+    humiGauge.set(humiValue);
+    pmGauge.set(pmValue);
   });
 
   // ให้กราฟอัปเดตทุก 2 วิ (ตามรอบ ESP)
