@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Real-Time Sensor Dashboard</title>
   <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -18,26 +17,31 @@
     }
     .dashboard {
       display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
       gap: 30px;
-      margin: 30px auto;
+      margin: 20px auto;
     }
     canvas {
       background: white;
       border-radius: 12px;
       padding: 10px;
     }
-    .gauge-container {
-      width: 200px;
+    .gauge-group {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
     }
-    .chart-container {
-      width: 300px;
-      height: 200px;
+    .gauge-container {
+      width: 180px;
     }
     .value-label {
-      font-size: 20px;
+      font-size: 18px;
       margin-top: 5px;
+    }
+    .chart-container {
+      width: 600px;
+      height: 250px;
     }
   </style>
 </head>
@@ -46,74 +50,58 @@
 <h1>Real-Time Sensor Dashboard</h1>
 
 <div class="dashboard">
-  <!-- Temperature -->
-  <div class="gauge-container">
-    <canvas id="tempGauge"></canvas>
-    <div class="value-label" id="temperature">0 °C</div>
-  </div>
-
   <div class="chart-container">
-    <canvas id="tempChart"></canvas>
+    <canvas id="sensorChart"></canvas>
   </div>
 
-  <!-- Humidity -->
-  <div class="gauge-container">
-    <canvas id="humiGauge"></canvas>
-    <div class="value-label" id="humidity">0 %</div>
-  </div>
-
-  <div class="chart-container">
-    <canvas id="humiChart"></canvas>
-  </div>
-
-  <!-- PM2.5 -->
-  <div class="gauge-container">
-    <canvas id="pmGauge"></canvas>
-    <div class="value-label" id="pm25">0 µg/m³</div>
-  </div>
-
-  <div class="chart-container">
-    <canvas id="pmChart"></canvas>
+  <div class="gauge-group">
+    <div class="gauge-container">
+      <canvas id="tempGauge"></canvas>
+      <div class="value-label" id="temperature">0 °C</div>
+    </div>
+    <div class="gauge-container">
+      <canvas id="humiGauge"></canvas>
+      <div class="value-label" id="humidity">0 %</div>
+    </div>
+    <div class="gauge-container">
+      <canvas id="pmGauge"></canvas>
+      <div class="value-label" id="pm25">0 µg/m³</div>
+    </div>
   </div>
 </div>
 
 <script>
   const socket = io.connect();
 
-  // ตั้งค่า Chart.js
-  function createLineChart(ctx, label, color) {
-    return new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label: label,
-          data: [],
-          borderColor: color,
-          borderWidth: 2,
-          fill: false,
-          pointRadius: 0
-        }]
-      },
-      options: {
-        animation: false,
-        scales: {
-          x: { display: false },
-          y: { beginAtZero: true }
-        }
+  // ตั้งค่า Chart.js (กราฟเดียวรวม 3 เส้น)
+  const sensorChart = new Chart(document.getElementById('sensorChart'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label: 'Temperature (°C)', data: [], borderColor: 'red', fill: false, pointRadius: 0 },
+        { label: 'Humidity (%)', data: [], borderColor: 'blue', fill: false, pointRadius: 0 },
+        { label: 'PM2.5 (µg/m³)', data: [], borderColor: 'green', fill: false, pointRadius: 0 }
+      ]
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { display: false },
+        y: { beginAtZero: true }
       }
-    });
-  }
+    }
+  });
 
-  // ตั้งค่าเกจ
+  // สร้างเกจ
   function createGauge(canvas, min, max) {
     return new Gauge(canvas).setOptions({
       angle: 0,
       lineWidth: 0.2,
       radiusScale: 0.9,
       pointer: { length: 0.6, color: '#000' },
-      limitMax: false,
-      limitMin: false,
       colorStart: '#6FADCF',
       colorStop: '#8FC0DA',
       strokeColor: '#E0E0E0',
@@ -121,54 +109,45 @@
     }).set({ min: min, max: max });
   }
 
-  // สร้าง Chart และ Gauge
-  const tempChart = createLineChart(document.getElementById('tempChart'), 'Temperature (°C)', 'red');
-  const humiChart = createLineChart(document.getElementById('humiChart'), 'Humidity (%)', 'blue');
-  const pmChart = createLineChart(document.getElementById('pmChart'), 'PM2.5 (µg/m³)', 'green');
-
   const tempGauge = createGauge(document.getElementById('tempGauge'), 0, 50);
   const humiGauge = createGauge(document.getElementById('humiGauge'), 0, 100);
   const pmGauge = createGauge(document.getElementById('pmGauge'), 0, 300);
 
-  // อัปเดตข้อมูลเมื่อรับข้อมูลใหม่
+  // อัปเดตข้อมูล real-time
   socket.on('sensor_data', function(data) {
     const now = new Date().toLocaleTimeString();
     const value = parseFloat(data.value);
 
     if (data.topic === 'sensor/temperature') {
       document.getElementById('temperature').innerText = value + " °C";
-      tempChart.data.labels.push(now);
-      tempChart.data.datasets[0].data.push(value);
-      if (tempChart.data.labels.length > 20) {
-        tempChart.data.labels.shift();
-        tempChart.data.datasets[0].data.shift();
-      }
-      tempChart.update();
       tempGauge.set(value);
+      updateChart(0, value, now);
 
     } else if (data.topic === 'sensor/humidity') {
       document.getElementById('humidity').innerText = value + " %";
-      humiChart.data.labels.push(now);
-      humiChart.data.datasets[0].data.push(value);
-      if (humiChart.data.labels.length > 20) {
-        humiChart.data.labels.shift();
-        humiChart.data.datasets[0].data.shift();
-      }
-      humiChart.update();
       humiGauge.set(value);
+      updateChart(1, value, now);
 
     } else if (data.topic === 'sensor/pm25') {
       document.getElementById('pm25').innerText = value + " µg/m³";
-      pmChart.data.labels.push(now);
-      pmChart.data.datasets[0].data.push(value);
-      if (pmChart.data.labels.length > 20) {
-        pmChart.data.labels.shift();
-        pmChart.data.datasets[0].data.shift();
-      }
-      pmChart.update();
       pmGauge.set(value);
+      updateChart(2, value, now);
     }
   });
+
+  // อัปเดตกราฟ
+  function updateChart(datasetIndex, value, label) {
+    const chart = sensorChart;
+    if (chart.data.labels.length >= 20) {
+      chart.data.labels.shift();
+      chart.data.datasets.forEach(ds => ds.data.shift());
+    }
+    if (chart.data.labels.length === 0 || chart.data.labels[chart.data.labels.length-1] !== label) {
+      chart.data.labels.push(label);
+    }
+    chart.data.datasets[datasetIndex].data.push(value);
+    chart.update();
+  }
 </script>
 
 </body>
