@@ -29,12 +29,11 @@
     .gauge-group {
       display: flex;
       justify-content: center;
-      gap: 80px; /* เพิ่มระยะห่างระหว่างเกจ */
+      gap: 40px;
       flex-wrap: wrap;
     }
     .gauge-container {
-      width: 180px; /* ปรับขนาดเกจให้กว้างขึ้น */
-      height: 160px; /* เพิ่มขนาดความสูงของเกจ */
+      width: 160px;
     }
     .value-label {
       font-size: 18px;
@@ -131,6 +130,8 @@
 
   // อัปเดตข้อมูลจาก MQTT
   socket.on('sensor_data', function(data) {
+    console.log("Received Data: ", data);  // ดูค่าที่ส่งมาจากเซิร์ฟเวอร์
+
     const tempValue = data.temperature;
     const humiValue = data.humidity;
     const pmValue = data.pm25;
@@ -139,9 +140,26 @@
     document.getElementById('humidity').innerText = humiValue + " %";
     document.getElementById('pm25').innerText = pmValue + " µg/m³";
 
-    tempGauge.set(tempValue);
-    humiGauge.set(humiValue);
-    pmGauge.set(pmValue);
+    tempGauge.set(tempValue);  // อัปเดตค่าเกจ
+    humiGauge.set(humiValue);  // อัปเดตค่าเกจ
+    pmGauge.set(pmValue);      // อัปเดตค่าเกจ
+
+    // ตรวจสอบว่าได้รับข้อมูลที่ถูกต้องและอัพเดตกราฟ
+    if (!isNaN(tempValue) && !isNaN(humiValue) && !isNaN(pmValue)) {
+      const now = new Date().toLocaleTimeString();
+
+      if (sensorChart.data.labels.length > 20) {
+        sensorChart.data.labels.shift();
+        sensorChart.data.datasets.forEach(ds => ds.data.shift());
+      }
+
+      sensorChart.data.labels.push(now);
+      sensorChart.data.datasets[0].data.push(tempValue);
+      sensorChart.data.datasets[1].data.push(humiValue);
+      sensorChart.data.datasets[2].data.push(pmValue);
+
+      sensorChart.update();  // อัพเดตกราฟทุกครั้งที่มีข้อมูลใหม่
+    }
   });
 
   // ให้กราฟอัปเดตทุก 2 วิ (ตามรอบ ESP)
