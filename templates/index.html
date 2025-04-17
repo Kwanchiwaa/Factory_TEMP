@@ -1,68 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Real-time Sensor Dashboard</title>
-  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body { font-family: sans-serif; text-align: center; background: #f9f9f9; }
-    canvas { max-width: 600px; margin: 20px auto; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Sensor Data</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 </head>
 <body>
-  <h1>Real-time Sensor Dashboard</h1>
-  
-  <canvas id="tempChart"></canvas>
-  <canvas id="humChart"></canvas>
-  <canvas id="pmChart"></canvas>
+    <h1>Real-Time Sensor Data</h1>
+    <p>Temperature: <span id="temperature">N/A</span></p>
+    <p>Humidity: <span id="humidity">N/A</span></p>
+    <p>PM2.5: <span id="pm25">N/A</span></p>
 
-  <script>
-    const socket = io();
+    <script>
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
 
-    // Chart setup
-    const tempCtx = document.getElementById('tempChart').getContext('2d');
-    const humCtx = document.getElementById('humChart').getContext('2d');
-    const pmCtx = document.getElementById('pmChart').getContext('2d');
-
-    const tempData = { labels: [], datasets: [{ label: 'Temperature (°C)', data: [], borderColor: 'red', fill: false }] };
-    const humData = { labels: [], datasets: [{ label: 'Humidity (%)', data: [], borderColor: 'blue', fill: false }] };
-    const pmData = { labels: [], datasets: [{ label: 'PM2.5 (μg/m³)', data: [], borderColor: 'green', fill: false }] };
-
-    const tempChart = new Chart(tempCtx, { type: 'line', data: tempData });
-    const humChart = new Chart(humCtx, { type: 'line', data: humData });
-    const pmChart = new Chart(pmCtx, { type: 'line', data: pmData });
-
-    // เมื่อได้รับข้อมูลจาก server
-    socket.on('sensor_data', function(data) {
-      const timestamp = new Date().toLocaleTimeString();
-
-      // Update temp
-      tempData.labels.push(timestamp);
-      tempData.datasets[0].data.push(data.temperature);
-      if (tempData.labels.length > 10) {
-        tempData.labels.shift();
-        tempData.datasets[0].data.shift();
-      }
-      tempChart.update();
-
-      // Update hum
-      humData.labels.push(timestamp);
-      humData.datasets[0].data.push(data.humidity);
-      if (humData.labels.length > 10) {
-        humData.labels.shift();
-        humData.datasets[0].data.shift();
-      }
-      humChart.update();
-
-      // Update pm2.5
-      pmData.labels.push(timestamp);
-      pmData.datasets[0].data.push(data.pm25);
-      if (pmData.labels.length > 10) {
-        pmData.labels.shift();
-        pmData.datasets[0].data.shift();
-      }
-      pmChart.update();
-    });
-  </script>
+        socket.on('sensor_data', function(data) {
+            console.log(data);  // ดูข้อมูลที่ได้รับจาก server
+            if (data.topic === 'sensor/temperature') {
+                document.getElementById('temperature').innerText = data.message;
+            } else if (data.topic === 'sensor/humidity') {
+                document.getElementById('humidity').innerText = data.message;
+            } else if (data.topic === 'sensor/pm25') {
+                document.getElementById('pm25').innerText = data.message;
+            }
+        });
+    </script>
 </body>
 </html>
