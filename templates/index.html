@@ -19,7 +19,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 30px;
+      gap: 40px; /* เพิ่มช่องว่างระหว่างแผง */
       margin: 20px auto;
     }
     .chart-container {
@@ -29,15 +29,17 @@
     .gauge-group {
       display: flex;
       justify-content: center;
-      gap: 40px;
-      flex-wrap: wrap;
+      gap: 60px; /* เพิ่มช่องว่างระหว่างเกจ */
+      flex-wrap: wrap;  /* ถ้าพื้นที่ไม่พอก็ให้เกจลงบรรทัดใหม่ */
+      padding: 20px;  /* เพิ่ม padding ให้ห่างจากขอบ */
     }
     .gauge-container {
-      width: 160px;
+      width: 180px; /* ปรับขนาดเกจ */
+      height: 180px; /* ปรับขนาดเกจ */
     }
     .value-label {
       font-size: 18px;
-      margin-top: 5px;
+      margin-top: 10px;
     }
     canvas {
       background: white;
