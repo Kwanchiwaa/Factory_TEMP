@@ -1,40 +1,53 @@
-from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
+from flask import Flask, render_template, jsonify
 import paho.mqtt.client as mqtt
-import ssl
 import json
-import os
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")  # ใช้ threading worker
 
 # MQTT setup
+mqtt_broker = "b4e111cfdc1c405ba7d73351938d025f.s1.eu.hivemq.cloud"
+mqtt_port = 8883
+mqtt_user = "Kwanchiwa"
+mqtt_pass = "Preaw1993"
+mqtt_topic = "sensor/#"
+
+# Data storage
+sensor_data = {
+    "temperature": 0.0,
+    "humidity": 0.0,
+    "pm25": 0
+}
+
+# Callback functions
 def on_connect(client, userdata, flags, rc):
-    print("Connected to MQTT with result code", rc)
-    client.subscribe("factory/sensor")  # ใช้ topic เดิม
+    print("Connected with result code " + str(rc))
+    client.subscribe(mqtt_topic)
 
 def on_message(client, userdata, msg):
-    try:
-        mqtt_data = json.loads(msg.payload.decode())
-        print("Received:", mqtt_data)
-        socketio.emit('sensor_update', mqtt_data)  # ส่ง real-time ไปหน้าเว็บ
-    except Exception as e:
-        print("Failed to decode MQTT message:", e)
+    global sensor_data
+    payload = msg.payload.decode('utf-8')
+    if msg.topic == "sensor/temperature":
+        sensor_data["temperature"] = float(payload)
+    elif msg.topic == "sensor/humidity":
+        sensor_data["humidity"] = float(payload)
+    elif msg.topic == "sensor/pm25":
+        sensor_data["pm25"] = int(payload)
 
-mqtt_client = mqtt.Client()
-mqtt_client.on_connect = on_connect
-mqtt_client.on_message = on_message
+client = mqtt.Client()
+client.username_pw_set(mqtt_user, mqtt_pass)
+client.on_connect = on_connect
+client.on_message = on_message
 
-mqtt_client.tls_set(cert_reqs=ssl.CERT_NONE)
-mqtt_client.tls_insecure_set(True)
+client.connect(mqtt_broker, mqtt_port, 60)
+client.loop_start()
 
-mqtt_client.connect("b4e111cfdc1c405ba7d73351938d025f.s1.eu.hivemq.cloud", 8883, 60)
-mqtt_client.loop_start()
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-@app.route("/")
-def dashboard():
-    return render_template("index.html")
+@app.route('/get_data')
+def get_data():
+    return jsonify(sensor_data)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # รับ port จาก Render หรือใช้ 5000 เป็นค่า default
-    socketio.run(app, host="0.0.0.0", port=port)  # ให้ run บน port ที่ระบบกำหนด
+    app.run(debug=True, host="0.0.0.0", port=5000)
