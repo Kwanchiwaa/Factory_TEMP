@@ -12,7 +12,6 @@ mqtt_port = 8883
 mqtt_user = "Kwanchiwa"
 mqtt_pass = "Preaw1993"
 
-# รับ MQTT message
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code " + str(rc))
     client.subscribe("sensor/#")
@@ -27,7 +26,7 @@ def on_message(client, userdata, msg):
 
 mqtt_client = mqtt.Client()
 mqtt_client.username_pw_set(mqtt_user, mqtt_pass)
-mqtt_client.tls_set()  # ใช้ SSL
+mqtt_client.tls_set()  # SSL
 mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message
 mqtt_client.connect(mqtt_broker, mqtt_port, 60)
@@ -39,10 +38,5 @@ def index():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
-
-
-if __name__ == '__main__':
-    # ใช้ PORT ที่ Render กำหนดให้
-    port = os.getenv('PORT', 5000)  
     socketio.run(app, host="0.0.0.0", port=port)
+
