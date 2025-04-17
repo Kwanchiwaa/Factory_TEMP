@@ -1,3 +1,4 @@
 flask
 flask-socketio
 paho-mqtt
+werkzeug<3.0
