@@ -1,23 +1,69 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Sensor Dashboard</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-time Sensor Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
   <h1>Real-time Sensor Dashboard</h1>
-  <p id="temperature">Temperature: -- °C</p>
-  <p id="humidity">Humidity: -- %</p>
-  <p id="pm25">PM2.5: -- µg/m³</p>
-
+  <canvas id="sensorChart" width="400" height="200"></canvas>
   <script>
-    var socket = io();
-
-    socket.on('sensor_update', function(data) {
-      document.getElementById("temperature").innerText = "Temperature: " + data.temperature + " °C";
-      document.getElementById("humidity").innerText = "Humidity: " + data.humidity + " %";
-      document.getElementById("pm25").innerText = "PM2.5: " + data.pm25 + " µg/m³";
+    var ctx = document.getElementById('sensorChart').getContext('2d');
+    var sensorChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [], // Time or other labels
+        datasets: [{
+          label: 'Temperature (°C)',
+          borderColor: 'rgba(255, 99, 132, 1)',
+          data: [],
+          fill: false
+        }, {
+          label: 'Humidity (%)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          data: [],
+          fill: false
+        }, {
+          label: 'PM2.5 (µg/m³)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          data: [],
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            type: 'linear',
+            position: 'bottom'
+          }
+        }
+      }
     });
+
+    function updateData() {
+      $.get('/get_data', function(data) {
+        var currentTime = Date.now();
+        sensorChart.data.labels.push(currentTime);
+        sensorChart.data.datasets[0].data.push(data.temperature);
+        sensorChart.data.datasets[1].data.push(data.humidity);
+        sensorChart.data.datasets[2].data.push(data.pm25);
+
+        if (sensorChart.data.labels.length > 50) {
+          sensorChart.data.labels.shift();
+          sensorChart.data.datasets.forEach(function(dataset) {
+            dataset.data.shift();
+          });
+        }
+
+        sensorChart.update();
+      });
+    }
+
+    setInterval(updateData, 2000); // Update every 2 seconds
   </script>
 </body>
 </html>
