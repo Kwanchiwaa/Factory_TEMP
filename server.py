@@ -1,53 +1,45 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template
+from flask_socketio import SocketIO
 import paho.mqtt.client as mqtt
 import json
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# MQTT setup
-mqtt_broker = "b4e111cfdc1c405ba7d73351938d025f.s1.eu.hivemq.cloud"
-mqtt_port = 8883
-mqtt_user = "Kwanchiwa"
-mqtt_pass = "Preaw1993"
-mqtt_topic = "sensor/#"
+# MQTT Config
+MQTT_BROKER = "b4e111cfdc1c405ba7d73351938d025f.s1.eu.hivemq.cloud"
+MQTT_PORT = 8883
+MQTT_USER = "Kwanchiwa"
+MQTT_PASS = "Preaw1993"
+MQTT_TOPIC = "sensor/#"
 
-# Data storage
-sensor_data = {
-    "temperature": 0.0,
-    "humidity": 0.0,
-    "pm25": 0
-}
-
-# Callback functions
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code " + str(rc))
-    client.subscribe(mqtt_topic)
+    print("Connected to MQTT with result code " + str(rc))
+    client.subscribe(MQTT_TOPIC)
 
 def on_message(client, userdata, msg):
-    global sensor_data
-    payload = msg.payload.decode('utf-8')
-    if msg.topic == "sensor/temperature":
-        sensor_data["temperature"] = float(payload)
-    elif msg.topic == "sensor/humidity":
-        sensor_data["humidity"] = float(payload)
-    elif msg.topic == "sensor/pm25":
-        sensor_data["pm25"] = int(payload)
+    topic = msg.topic
+    payload = msg.payload.decode()
+
+    print(f"Received: {topic} -> {payload}")
+
+    # ส่งข้อมูลเข้า Socket.IO
+    socketio.emit('sensor_data', {'topic': topic, 'value': payload})
 
 client = mqtt.Client()
-client.username_pw_set(mqtt_user, mqtt_pass)
+client.username_pw_set(MQTT_USER, MQTT_PASS)
 client.on_connect = on_connect
 client.on_message = on_message
 
-client.connect(mqtt_broker, mqtt_port, 60)
+# SSL แบบไม่เช็ค cert (เฉพาะทดสอบ)
+client.tls_set()
+client.tls_insecure_set(True)
+client.connect(MQTT_BROKER, MQTT_PORT, 60)
 client.loop_start()
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/get_data')
-def get_data():
-    return jsonify(sensor_data)
-
-if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+if __name__ == '__main__':
+    socketio.run(app, host="0.0.0.0", port=5000)
