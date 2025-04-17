@@ -29,7 +29,7 @@
     .gauge-group {
       display: flex;
       justify-content: center;
-      gap: 180px;
+      gap: 60px;
       flex-wrap: nowrap;
       padding: 20px;
     }
@@ -64,17 +64,17 @@
 
   <div class="gauge-group">
     <div class="gauge-container">
-      <div class="gauge-label">Temp</div>
+      <div class="gauge-label">Temperature</div>
       <canvas id="tempGauge"></canvas>
       <div class="value-label" id="temperature">0 °C</div>
     </div>
     <div class="gauge-container">
-      <div class="gauge-label">Humi</div>
+      <div class="gauge-label">Humidity</div>
       <canvas id="humiGauge"></canvas>
       <div class="value-label" id="humidity">0 %</div>
     </div>
     <div class="gauge-container">
-      <div class="gauge-label">P.M.</div>
+      <div class="gauge-label">P.M.2.5</div>
       <canvas id="pmGauge"></canvas>
       <div class="value-label" id="pm25">0 µg/m³</div>
     </div>
@@ -84,15 +84,15 @@
 <script>
   const socket = io.connect();
 
-  // Chart.js (3 เส้น)
+  // Chart.js (ปรับเส้นให้เรียบง่าย)
   const sensorChart = new Chart(document.getElementById('sensorChart'), {
     type: 'line',
     data: {
       labels: [],
       datasets: [
-        { label: 'Temperature (°C)', data: [], borderColor: 'red', fill: false, pointRadius: 0 },
-        { label: 'Humidity (%)', data: [], borderColor: 'blue', fill: false, pointRadius: 0 },
-        { label: 'PM2.5 (µg/m³)', data: [], borderColor: 'green', fill: false, pointRadius: 0 }
+        { label: 'Temperature (°C)', data: [], borderColor: 'red', fill: false, pointRadius: 3, borderWidth: 2 },
+        { label: 'Humidity (%)', data: [], borderColor: 'blue', fill: false, pointRadius: 3, borderWidth: 2 },
+        { label: 'PM2.5 (µg/m³)', data: [], borderColor: 'green', fill: false, pointRadius: 3, borderWidth: 2 }
       ]
     },
     options: {
@@ -100,8 +100,15 @@
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        x: { display: false },
-        y: { beginAtZero: true }
+        x: { 
+          type: 'category',
+          labels: [],
+          title: { display: true, text: 'Time' }
+        },
+        y: { 
+          beginAtZero: true,
+          title: { display: true, text: 'Value' }
+        }
       },
       plugins: {
         legend: { labels: { boxWidth: 12 } }
