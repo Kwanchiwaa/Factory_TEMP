@@ -13,16 +13,16 @@
     <p>PM2.5: <span id="pm25">N/A</span></p>
 
     <script>
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var socket = io.connect();
 
         socket.on('sensor_data', function(data) {
             console.log(data);  // ดูข้อมูลที่ได้รับจาก server
             if (data.topic === 'sensor/temperature') {
-                document.getElementById('temperature').innerText = data.message;
+                document.getElementById('temperature').innerText = data.value + ' °C';
             } else if (data.topic === 'sensor/humidity') {
-                document.getElementById('humidity').innerText = data.message;
+                document.getElementById('humidity').innerText = data.value + ' %';
             } else if (data.topic === 'sensor/pm25') {
-                document.getElementById('pm25').innerText = data.message;
+                document.getElementById('pm25').innerText = data.value + ' µg/m³';
             }
         });
     </script>
