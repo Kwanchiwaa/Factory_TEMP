@@ -57,11 +57,18 @@
       options: {
         responsive: true,
         animation: false,
-        scales: { x: { title: { display: true, text: "Time" } } }
+        scales: { 
+          x: { 
+            title: { display: true, text: "Time" } 
+          },
+          y: { 
+            title: { display: true, text: "Value" } 
+          }
+        }
       }
     });
 
-    // Gauges
+    // Gauges and arrows
     const tempGaugeCtx = document.getElementById("tempGauge").getContext("2d");
     const humiGaugeCtx = document.getElementById("humiGauge").getContext("2d");
     const pmGaugeCtx = document.getElementById("pmGauge").getContext("2d");
@@ -89,6 +96,13 @@
     const tempGauge = createGauge(tempGaugeCtx, "red", 50);
     const humiGauge = createGauge(humiGaugeCtx, "blue", 100);
     const pmGauge = createGauge(pmGaugeCtx, "green", 500);
+
+    // Arrow for gauge values
+    function updateArrow(gauge, value, maxValue) {
+      const angle = (value / maxValue) * 180;  // Mapping value to angle
+      const arrow = gauge.ctx.createLinearGradient(0, 0, 0, -angle); 
+      // Add code to rotate arrow here
+    }
 
     socket.on("sensor_data", (data) => {
       const timeLabel = new Date().toLocaleTimeString();
@@ -121,6 +135,11 @@
       pmGauge.data.datasets[0].data[1] = 500 - data.pm25;
       pmGauge.update();
       document.getElementById("pmValue").innerText = data.pm25 + " µg/m³";
+
+      // Update the arrows based on current values
+      updateArrow(tempGauge, data.temperature, 50);
+      updateArrow(humiGauge, data.humidity, 100);
+      updateArrow(pmGauge, data.pm25, 500);
     });
   </script>
 </body>
