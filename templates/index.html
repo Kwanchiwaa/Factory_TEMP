@@ -1,190 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Sensor Data</title>
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        canvas {
-            width: 90% !important;
-            height: 300px !important;
-        }
-        #dashboard {
-            margin-top: 30px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Real-Time Sensor Dashboard</title>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gaugeJS/dist/gauge.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f5f5f5;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    .dashboard {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+      margin: 30px auto;
+    }
+    canvas {
+      background: white;
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .gauge-container {
+      width: 200px;
+    }
+    .chart-container {
+      width: 300px;
+      height: 200px;
+    }
+    .value-label {
+      font-size: 20px;
+      margin-top: 5px;
+    }
+  </style>
 </head>
 <body>
-    <h1>Real-Time Sensor Data</h1>
-    <div id="dashboard">
-        <p>Temperature: <span id="temperature">N/A</span> °C</p>
-        <p>Humidity: <span id="humidity">N/A</span> %</p>
-        <p>PM2.5: <span id="pm25">N/A</span> µg/m³</p>
 
-        <canvas id="tempChart"></canvas>
-        <canvas id="humiChart"></canvas>
-        <canvas id="pm25Chart"></canvas>
-    </div>
+<h1>Real-Time Sensor Dashboard</h1>
 
-    <script>
-        var socket = io.connect();
+<div class="dashboard">
+  <!-- Temperature -->
+  <div class="gauge-container">
+    <canvas id="tempGauge"></canvas>
+    <div class="value-label" id="temperature">0 °C</div>
+  </div>
 
-        // สร้างกราฟ
-        var tempChart = new Chart(document.getElementById('tempChart'), {
-            type: 'line',
-            data: {
-                labels: [],  // เวลา
-                datasets: [{
-                    label: 'Temperature (°C)',
-                    data: [],
-                    borderColor: 'rgb(255, 99, 132)',
-                    fill: false,
-                    borderWidth: 2,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        ticks: {
-                            autoSkip: true,
-                            maxTicksLimit: 10
-                        }
-                    },
-                    y: {
-                        min: 0,
-                        max: 40,  // กำหนดขอบเขตที่เหมาะสม
-                        ticks: {
-                            stepSize: 5
-                        }
-                    }
-                },
-                animation: {
-                    duration: 500,  // เวลาแอนิเมชั่น
-                    easing: 'easeInOutQuad'
-                }
-            }
-        });
+  <div class="chart-container">
+    <canvas id="tempChart"></canvas>
+  </div>
 
-        var humiChart = new Chart(document.getElementById('humiChart'), {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Humidity (%)',
-                    data: [],
-                    borderColor: 'rgb(54, 162, 235)',
-                    fill: false,
-                    borderWidth: 2,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        ticks: {
-                            autoSkip: true,
-                            maxTicksLimit: 10
-                        }
-                    },
-                    y: {
-                        min: 0,
-                        max: 100,
-                        ticks: {
-                            stepSize: 10
-                        }
-                    }
-                },
-                animation: {
-                    duration: 500,
-                    easing: 'easeInOutQuad'
-                }
-            }
-        });
+  <!-- Humidity -->
+  <div class="gauge-container">
+    <canvas id="humiGauge"></canvas>
+    <div class="value-label" id="humidity">0 %</div>
+  </div>
 
-        var pm25Chart = new Chart(document.getElementById('pm25Chart'), {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'PM2.5 (µg/m³)',
-                    data: [],
-                    borderColor: 'rgb(75, 192, 192)',
-                    fill: false,
-                    borderWidth: 2,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        ticks: {
-                            autoSkip: true,
-                            maxTicksLimit: 10
-                        }
-                    },
-                    y: {
-                        min: 0,
-                        max: 500,  // ขอบเขตของ PM2.5
-                        ticks: {
-                            stepSize: 50
-                        }
-                    }
-                },
-                animation: {
-                    duration: 500,
-                    easing: 'easeInOutQuad'
-                }
-            }
-        });
+  <div class="chart-container">
+    <canvas id="humiChart"></canvas>
+  </div>
 
-        socket.on('sensor_data', function(data) {
-            console.log(data);
+  <!-- PM2.5 -->
+  <div class="gauge-container">
+    <canvas id="pmGauge"></canvas>
+    <div class="value-label" id="pm25">0 µg/m³</div>
+  </div>
 
-            if (data.topic === 'sensor/temperature') {
-                document.getElementById('temperature').innerText = data.value;
-                if (tempChart.data.labels.length > 10) {
-                    tempChart.data.labels.shift();  // ลบ label เก่า
-                    tempChart.data.datasets[0].data.shift();  // ลบข้อมูลเก่า
-                }
-                tempChart.data.labels.push(Date.now());  // ใช้เวลาเป็น label
-                tempChart.data.datasets[0].data.push(parseFloat(data.value));  // เพิ่มข้อมูลใหม่
-                tempChart.update();
-            } else if (data.topic === 'sensor/humidity') {
-                document.getElementById('humidity').innerText = data.value;
-                if (humiChart.data.labels.length > 10) {
-                    humiChart.data.labels.shift();
-                    humiChart.data.datasets[0].data.shift();
-                }
-                humiChart.data.labels.push(Date.now());
-                humiChart.data.datasets[0].data.push(parseFloat(data.value));
-                humiChart.update();
-            } else if (data.topic === 'sensor/pm25') {
-                document.getElementById('pm25').innerText = data.value;
-                if (pm25Chart.data.labels.length > 10) {
-                    pm25Chart.data.labels.shift();
-                    pm25Chart.data.datasets[0].data.shift();
-                }
-                pm25Chart.data.labels.push(Date.now());
-                pm25Chart.data.datasets[0].data.push(parseFloat(data.value));
-                pm25Chart.update();
-            }
-        });
-    </script>
+  <div class="chart-container">
+    <canvas id="pmChart"></canvas>
+  </div>
+</div>
+
+<script>
+  const socket = io.connect();
+
+  // ตั้งค่า Chart.js
+  function createLineChart(ctx, label, color) {
+    return new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: label,
+          data: [],
+          borderColor: color,
+          borderWidth: 2,
+          fill: false,
+          pointRadius: 0
+        }]
+      },
+      options: {
+        animation: false,
+        scales: {
+          x: { display: false },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  // ตั้งค่าเกจ
+  function createGauge(canvas, min, max) {
+    return new Gauge(canvas).setOptions({
+      angle: 0,
+      lineWidth: 0.2,
+      radiusScale: 0.9,
+      pointer: { length: 0.6, color: '#000' },
+      limitMax: false,
+      limitMin: false,
+      colorStart: '#6FADCF',
+      colorStop: '#8FC0DA',
+      strokeColor: '#E0E0E0',
+      highDpiSupport: true
+    }).set({ min: min, max: max });
+  }
+
+  // สร้าง Chart และ Gauge
+  const tempChart = createLineChart(document.getElementById('tempChart'), 'Temperature (°C)', 'red');
+  const humiChart = createLineChart(document.getElementById('humiChart'), 'Humidity (%)', 'blue');
+  const pmChart = createLineChart(document.getElementById('pmChart'), 'PM2.5 (µg/m³)', 'green');
+
+  const tempGauge = createGauge(document.getElementById('tempGauge'), 0, 50);
+  const humiGauge = createGauge(document.getElementById('humiGauge'), 0, 100);
+  const pmGauge = createGauge(document.getElementById('pmGauge'), 0, 300);
+
+  // อัปเดตข้อมูลเมื่อรับข้อมูลใหม่
+  socket.on('sensor_data', function(data) {
+    const now = new Date().toLocaleTimeString();
+    const value = parseFloat(data.value);
+
+    if (data.topic === 'sensor/temperature') {
+      document.getElementById('temperature').innerText = value + " °C";
+      tempChart.data.labels.push(now);
+      tempChart.data.datasets[0].data.push(value);
+      if (tempChart.data.labels.length > 20) {
+        tempChart.data.labels.shift();
+        tempChart.data.datasets[0].data.shift();
+      }
+      tempChart.update();
+      tempGauge.set(value);
+
+    } else if (data.topic === 'sensor/humidity') {
+      document.getElementById('humidity').innerText = value + " %";
+      humiChart.data.labels.push(now);
+      humiChart.data.datasets[0].data.push(value);
+      if (humiChart.data.labels.length > 20) {
+        humiChart.data.labels.shift();
+        humiChart.data.datasets[0].data.shift();
+      }
+      humiChart.update();
+      humiGauge.set(value);
+
+    } else if (data.topic === 'sensor/pm25') {
+      document.getElementById('pm25').innerText = value + " µg/m³";
+      pmChart.data.labels.push(now);
+      pmChart.data.datasets[0].data.push(value);
+      if (pmChart.data.labels.length > 20) {
+        pmChart.data.labels.shift();
+        pmChart.data.datasets[0].data.shift();
+      }
+      pmChart.update();
+      pmGauge.set(value);
+    }
+  });
+</script>
+
 </body>
 </html>
