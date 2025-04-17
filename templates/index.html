@@ -10,7 +10,7 @@
     body {
       font-family: sans-serif;
       text-align: center;
-      background: #f5f5f5;
+      background: #f0f0f0;
     }
     h1 {
       margin-top: 20px;
@@ -22,26 +22,27 @@
       gap: 30px;
       margin: 20px auto;
     }
-    canvas {
-      background: white;
-      border-radius: 12px;
-      padding: 10px;
+    .chart-container {
+      width: 500px;
+      height: 220px;
     }
     .gauge-group {
       display: flex;
       justify-content: center;
-      gap: 20px;
+      gap: 40px;
+      flex-wrap: wrap;
     }
     .gauge-container {
-      width: 180px;
+      width: 160px;
     }
     .value-label {
       font-size: 18px;
       margin-top: 5px;
     }
-    .chart-container {
-      width: 600px;
-      height: 250px;
+    canvas {
+      background: white;
+      border-radius: 12px;
+      padding: 5px;
     }
   </style>
 </head>
@@ -73,7 +74,7 @@
 <script>
   const socket = io.connect();
 
-  // ตั้งค่า Chart.js (กราฟเดียวรวม 3 เส้น)
+  // Chart.js (3 เส้น)
   const sensorChart = new Chart(document.getElementById('sensorChart'), {
     type: 'line',
     data: {
@@ -91,63 +92,79 @@
       scales: {
         x: { display: false },
         y: { beginAtZero: true }
+      },
+      plugins: {
+        legend: { labels: { boxWidth: 12 } }
       }
     }
   });
 
-  // สร้างเกจ
+  // เกจ 3 ตัว
   function createGauge(canvas, min, max) {
-    return new Gauge(canvas).setOptions({
+    const opts = {
       angle: 0,
       lineWidth: 0.2,
       radiusScale: 0.9,
-      pointer: { length: 0.6, color: '#000' },
+      pointer: { length: 0.6, color: '#333' },
+      limitMax: true,
+      limitMin: true,
       colorStart: '#6FADCF',
       colorStop: '#8FC0DA',
       strokeColor: '#E0E0E0',
       highDpiSupport: true
-    }).set({ min: min, max: max });
+    };
+    const gauge = new Gauge(canvas).setOptions(opts);
+    gauge.maxValue = max;
+    gauge.setMinValue(min);
+    gauge.animationSpeed = 32;
+    gauge.set(0);
+    return gauge;
   }
 
   const tempGauge = createGauge(document.getElementById('tempGauge'), 0, 50);
   const humiGauge = createGauge(document.getElementById('humiGauge'), 0, 100);
   const pmGauge = createGauge(document.getElementById('pmGauge'), 0, 300);
 
-  // อัปเดตข้อมูล real-time
+  // ค่าเก็บไว้สำหรับกราฟ
+  let tempValue = 0, humiValue = 0, pmValue = 0;
+
+  // อัปเดตข้อมูลจาก MQTT
   socket.on('sensor_data', function(data) {
-    const now = new Date().toLocaleTimeString();
     const value = parseFloat(data.value);
 
     if (data.topic === 'sensor/temperature') {
+      tempValue = value;
       document.getElementById('temperature').innerText = value + " °C";
       tempGauge.set(value);
-      updateChart(0, value, now);
-
-    } else if (data.topic === 'sensor/humidity') {
+    }
+    else if (data.topic === 'sensor/humidity') {
+      humiValue = value;
       document.getElementById('humidity').innerText = value + " %";
       humiGauge.set(value);
-      updateChart(1, value, now);
-
-    } else if (data.topic === 'sensor/pm25') {
+    }
+    else if (data.topic === 'sensor/pm25') {
+      pmValue = value;
       document.getElementById('pm25').innerText = value + " µg/m³";
       pmGauge.set(value);
-      updateChart(2, value, now);
     }
   });
 
-  // อัปเดตกราฟ
-  function updateChart(datasetIndex, value, label) {
-    const chart = sensorChart;
-    if (chart.data.labels.length >= 20) {
-      chart.data.labels.shift();
-      chart.data.datasets.forEach(ds => ds.data.shift());
+  // ให้กราฟอัปเดตทุก 2 วิ (ตามรอบ ESP)
+  setInterval(() => {
+    const now = new Date().toLocaleTimeString();
+
+    if (sensorChart.data.labels.length > 20) {
+      sensorChart.data.labels.shift();
+      sensorChart.data.datasets.forEach(ds => ds.data.shift());
     }
-    if (chart.data.labels.length === 0 || chart.data.labels[chart.data.labels.length-1] !== label) {
-      chart.data.labels.push(label);
-    }
-    chart.data.datasets[datasetIndex].data.push(value);
-    chart.update();
-  }
+
+    sensorChart.data.labels.push(now);
+    sensorChart.data.datasets[0].data.push(tempValue);
+    sensorChart.data.datasets[1].data.push(humiValue);
+    sensorChart.data.datasets[2].data.push(pmValue);
+
+    sensorChart.update();
+  }, 2000);
 </script>
 
 </body>
