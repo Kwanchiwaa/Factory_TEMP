@@ -6,7 +6,7 @@ import json
 import os
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")  # รองรับ cross-origin
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")  # ใช้ threading worker
 
 # MQTT setup
 def on_connect(client, userdata, flags, rc):
@@ -36,6 +36,5 @@ def dashboard():
     return render_template("index.html")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # ดึง port จาก Render
-    socketio.run(app, host="0.0.0.0", port=port)
-
+    port = int(os.environ.get("PORT", 5000))  # รับ port จาก Render หรือใช้ 5000 เป็นค่า default
+    socketio.run(app, host="0.0.0.0", port=port)  # ให้ run บน port ที่ระบบกำหนด
