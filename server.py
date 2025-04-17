@@ -2,6 +2,7 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO
 import paho.mqtt.client as mqtt
 import os
+import json
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -14,14 +15,11 @@ mqtt_pass = "Preaw1993"
 
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code " + str(rc))
-    client.subscribe("sensor/#")
+    client.subscribe("sensor/data")
 
 def on_message(client, userdata, msg):
     print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-    data = {
-        "topic": msg.topic,
-        "value": msg.payload.decode()
-    }
+    data = json.loads(msg.payload.decode())
     socketio.emit("sensor_data", data)
 
 mqtt_client = mqtt.Client()
@@ -38,5 +36,5 @@ def index():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port)
+    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
 
