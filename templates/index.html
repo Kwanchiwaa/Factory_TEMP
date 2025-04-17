@@ -19,7 +19,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 40px; /* เพิ่มช่องว่างระหว่างแผง */
+      gap: 40px;
       margin: 20px auto;
     }
     .chart-container {
@@ -28,17 +28,22 @@
     }
     .gauge-group {
       display: flex;
-      justify-content: center;  /* จัดเกจตรงกลาง */
-      gap: 180px;  /* เพิ่มช่องว่างระหว่างเกจ */
-      flex-wrap: nowrap;  /* ไม่ให้เกจลงบรรทัดใหม่ */
-      padding: 20px;  /* เพิ่ม padding ให้ห่างจากขอบ */
+      justify-content: center;
+      gap: 180px;
+      flex-wrap: nowrap;
+      padding: 20px;
     }
     .gauge-container {
-      width: 180px; /* ปรับขนาดเกจ */
-      height: 180px; /* ปรับขนาดเกจ */
+      width: 180px;
+      height: 180px;
     }
     .value-label {
       font-size: 18px;
+      margin-top: 10px;
+    }
+    .gauge-label {
+      font-size: 16px;
+      font-weight: bold;
       margin-top: 10px;
     }
     canvas {
@@ -59,14 +64,17 @@
 
   <div class="gauge-group">
     <div class="gauge-container">
+      <div class="gauge-label">Temp</div>
       <canvas id="tempGauge"></canvas>
       <div class="value-label" id="temperature">0 °C</div>
     </div>
     <div class="gauge-container">
+      <div class="gauge-label">Humi</div>
       <canvas id="humiGauge"></canvas>
       <div class="value-label" id="humidity">0 %</div>
     </div>
     <div class="gauge-container">
+      <div class="gauge-label">P.M.</div>
       <canvas id="pmGauge"></canvas>
       <div class="value-label" id="pm25">0 µg/m³</div>
     </div>
