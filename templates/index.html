@@ -1,105 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Sensor Dashboard</title>
-
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-gauge@0.3.0/dist/chartjs-gauge.min.js"></script>
-
-    <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; }
-        canvas { max-width: 400px; margin: 20px auto; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Real-Time Sensor Dashboard</title>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    canvas { max-width: 400px; }
+  </style>
 </head>
 <body>
-    <h1>Real-Time Sensor Dashboard</h1>
+  <h1>Real-Time Sensor Dashboard</h1>
 
-    <h3>Temperature (°C)</h3>
-    <canvas id="tempGauge"></canvas>
+  <p>Temperature: <span id="temperature">N/A</span> °C</p>
+  <canvas id="tempChart"></canvas>
 
-    <h3>Humidity (%)</h3>
-    <canvas id="humGauge"></canvas>
+  <p>Humidity: <span id="humidity">N/A</span> %</p>
+  <canvas id="humChart"></canvas>
 
-    <h3>PM2.5 (µg/m³)</h3>
-    <canvas id="pmChart"></canvas>
+  <p>PM2.5: <span id="pm25">N/A</span> µg/m³</p>
+  <canvas id="pmChart"></canvas>
 
-    <script>
-        var socket = io.connect();
+  <script>
+    var socket = io.connect();
 
-        // --- Temperature Gauge ---
-        var tempGaugeCtx = document.getElementById('tempGauge').getContext('2d');
-        var tempGauge = new Chart(tempGaugeCtx, {
-            type: 'gauge',
-            data: {
-                datasets: [{
-                    value: 0,
-                    minValue: 0,
-                    data: [0, 15, 30, 45],
-                    backgroundColor: ['#00FF00', '#FFFF00', '#FFA500', '#FF0000']
-                }]
-            },
-            options: { needle: { radiusPercentage: 2, widthPercentage: 3, lengthPercentage: 80 } }
-        });
+    // ChartJS chart setup
+    const tempCtx = document.getElementById('tempChart').getContext('2d');
+    const tempChart = new Chart(tempCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Temperature'],
+        datasets: [{
+          data: [0, 100],
+          backgroundColor: ['#ff6384', '#e0e0e0'],
+        }]
+      }
+    });
 
-        // --- Humidity Gauge ---
-        var humGaugeCtx = document.getElementById('humGauge').getContext('2d');
-        var humGauge = new Chart(humGaugeCtx, {
-            type: 'gauge',
-            data: {
-                datasets: [{
-                    value: 0,
-                    minValue: 0,
-                    data: [0, 30, 60, 100],
-                    backgroundColor: ['#00BFFF', '#7FFFD4', '#FFD700', '#FF4500']
-                }]
-            },
-            options: { needle: { radiusPercentage: 2, widthPercentage: 3, lengthPercentage: 80 } }
-        });
+    const humCtx = document.getElementById('humChart').getContext('2d');
+    const humChart = new Chart(humCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Humidity'],
+        datasets: [{
+          data: [0, 100],
+          backgroundColor: ['#36a2eb', '#e0e0e0'],
+        }]
+      }
+    });
 
-        // --- PM2.5 Line Chart ---
-        var pmChartCtx = document.getElementById('pmChart').getContext('2d');
-        var pmChart = new Chart(pmChartCtx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'PM2.5',
-                    borderColor: 'red',
-                    data: []
-                }]
-            },
-            options: {
-                scales: { x: { display: false }, y: { min: 0, max: 300 } }
-            }
-        });
+    const pmCtx = document.getElementById('pmChart').getContext('2d');
+    const pmChart = new Chart(pmCtx, {
+      type: 'bar',
+      data: {
+        labels: ['PM2.5'],
+        datasets: [{
+          label: 'PM2.5 (µg/m³)',
+          data: [0],
+          backgroundColor: ['#ffce56']
+        }]
+      }
+    });
 
-        // --- SocketIO Receive Data ---
-        socket.on('sensor_data', function(data) {
-            console.log(data);
-
-            if (data.topic === 'sensor/temperature') {
-                tempGauge.data.datasets[0].value = parseFloat(data.value);
-                tempGauge.update();
-            }
-
-            if (data.topic === 'sensor/humidity') {
-                humGauge.data.datasets[0].value = parseFloat(data.value);
-                humGauge.update();
-            }
-
-            if (data.topic === 'sensor/pm25') {
-                if (pmChart.data.labels.length > 20) {
-                    pmChart.data.labels.shift();
-                    pmChart.data.datasets[0].data.shift();
-                }
-                pmChart.data.labels.push(new Date().toLocaleTimeString());
-                pmChart.data.datasets[0].data.push(parseFloat(data.value));
-                pmChart.update();
-            }
-        });
-    </script>
+    // Update data from server
+    socket.on('sensor_data', function(data) {
+      console.log(data);
+      if (data.topic === 'sensor/temperature') {
+        document.getElementById('temperature').innerText = data.value;
+        tempChart.data.datasets[0].data[0] = parseFloat(data.value);
+        tempChart.data.datasets[0].data[1] = 100 - parseFloat(data.value);
+        tempChart.update();
+      }
+      if (data.topic === 'sensor/humidity') {
+        document.getElementById('humidity').innerText = data.value;
+        humChart.data.datasets[0].data[0] = parseFloat(data.value);
+        humChart.data.datasets[0].data[1] = 100 - parseFloat(data.value);
+        humChart.update();
+      }
+      if (data.topic === 'sensor/pm25') {
+        document.getElementById('pm25').innerText = data.value;
+        pmChart.data.datasets[0].data[0] = parseFloat(data.value);
+        pmChart.update();
+      }
+    });
+  </script>
 </body>
 </html>
