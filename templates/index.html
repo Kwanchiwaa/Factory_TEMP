@@ -29,7 +29,7 @@
     .gauge-group {
       display: flex;
       justify-content: center;
-      gap: 60px;
+      gap: 180px;
       flex-wrap: nowrap;
       padding: 20px;
     }
@@ -76,7 +76,7 @@
     <div class="gauge-container">
       <div class="gauge-label">P.M.2.5</div>
       <canvas id="pmGauge"></canvas>
-      <div class="value-label" id="pm25">0 µg/m³</div>
+      <div class="value-label" id="pm2.5">0 µg/m³</div>
     </div>
   </div>
 </div>
@@ -84,15 +84,14 @@
 <script>
   const socket = io.connect();
 
-  // Chart.js (ปรับเส้นให้เรียบง่าย)
   const sensorChart = new Chart(document.getElementById('sensorChart'), {
     type: 'line',
     data: {
-      labels: [],
+      labels: Array(50).fill(''),
       datasets: [
-        { label: 'Temperature (°C)', data: [], borderColor: 'red', fill: false, pointRadius: 3, borderWidth: 2 },
-        { label: 'Humidity (%)', data: [], borderColor: 'blue', fill: false, pointRadius: 3, borderWidth: 2 },
-        { label: 'PM2.5 (µg/m³)', data: [], borderColor: 'green', fill: false, pointRadius: 3, borderWidth: 2 }
+        { label: 'Temperature (°C)', data: Array(50).fill(null), borderColor: 'red', fill: false, pointRadius: 0, tension: 0.3 },
+        { label: 'Humidity (%)', data: Array(50).fill(null), borderColor: 'blue', fill: false, pointRadius: 0, tension: 0.3 },
+        { label: 'PM2.5 (µg/m³)', data: Array(50).fill(null), borderColor: 'green', fill: false, pointRadius: 0, tension: 0.3 }
       ]
     },
     options: {
@@ -100,15 +99,8 @@
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        x: { 
-          type: 'category',
-          labels: [],
-          title: { display: true, text: 'Time' }
-        },
-        y: { 
-          beginAtZero: true,
-          title: { display: true, text: 'Value' }
-        }
+        x: { display: false },
+        y: { beginAtZero: true }
       },
       plugins: {
         legend: { labels: { boxWidth: 12 } }
@@ -116,7 +108,6 @@
     }
   });
 
-  // เกจ 3 ตัว
   function createGauge(canvas, min, max) {
     const opts = {
       angle: 0,
@@ -142,13 +133,7 @@
   const humiGauge = createGauge(document.getElementById('humiGauge'), 0, 100);
   const pmGauge = createGauge(document.getElementById('pmGauge'), 0, 300);
 
-  // ค่าเก็บไว้สำหรับกราฟ
-  let tempValue = 0, humiValue = 0, pmValue = 0;
-
-  // อัปเดตข้อมูลจาก MQTT
   socket.on('sensor_data', function(data) {
-    console.log("Received Data: ", data);  // ดูค่าที่ส่งมาจากเซิร์ฟเวอร์
-
     const tempValue = data.temperature;
     const humiValue = data.humidity;
     const pmValue = data.pm25;
@@ -157,44 +142,21 @@
     document.getElementById('humidity').innerText = humiValue + " %";
     document.getElementById('pm25').innerText = pmValue + " µg/m³";
 
-    tempGauge.set(tempValue);  // อัปเดตค่าเกจ
-    humiGauge.set(humiValue);  // อัปเดตค่าเกจ
-    pmGauge.set(pmValue);      // อัปเดตค่าเกจ
+    tempGauge.set(tempValue);
+    humiGauge.set(humiValue);
+    pmGauge.set(pmValue);
 
-    // ตรวจสอบว่าได้รับข้อมูลที่ถูกต้องและอัพเดตกราฟ
-    if (!isNaN(tempValue) && !isNaN(humiValue) && !isNaN(pmValue)) {
-      const now = new Date().toLocaleTimeString();
-
-      if (sensorChart.data.labels.length > 20) {
-        sensorChart.data.labels.shift();
-        sensorChart.data.datasets.forEach(ds => ds.data.shift());
-      }
-
-      sensorChart.data.labels.push(now);
-      sensorChart.data.datasets[0].data.push(tempValue);
-      sensorChart.data.datasets[1].data.push(humiValue);
-      sensorChart.data.datasets[2].data.push(pmValue);
-
-      sensorChart.update();  // อัพเดตกราฟทุกครั้งที่มีข้อมูลใหม่
-    }
-  });
-
-  // ให้กราฟอัปเดตทุก 2 วิ (ตามรอบ ESP)
-  setInterval(() => {
-    const now = new Date().toLocaleTimeString();
-
-    if (sensorChart.data.labels.length > 20) {
-      sensorChart.data.labels.shift();
-      sensorChart.data.datasets.forEach(ds => ds.data.shift());
-    }
-
-    sensorChart.data.labels.push(now);
     sensorChart.data.datasets[0].data.push(tempValue);
+    sensorChart.data.datasets[0].data.shift();
+
     sensorChart.data.datasets[1].data.push(humiValue);
+    sensorChart.data.datasets[1].data.shift();
+
     sensorChart.data.datasets[2].data.push(pmValue);
+    sensorChart.data.datasets[2].data.shift();
 
     sensorChart.update();
-  }, 2000);
+  });
 </script>
 
 </body>
