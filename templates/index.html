@@ -1,111 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Factory Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.1/dist/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        .gauge-container { width: 300px; display: inline-block; margin: 20px; }
-        #chartContainer { width: 70%; margin: auto; }
-        .val-text { font-size: 20px; margin-top: 10px; }
-    </style>
+  <title>Sensor Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
 </head>
 <body>
-    <h1>Smart Factory Dashboard</h1>
+  <h1>Real-time Sensor Dashboard</h1>
+  <p id="temperature">Temperature: -- °C</p>
+  <p id="humidity">Humidity: -- %</p>
+  <p id="pm25">PM2.5: -- µg/m³</p>
 
-    <div class="gauge-container">
-        <h3>Temperature</h3>
-        <div id="tempVal" class="val-text">-- °C</div>
-    </div>
+  <script>
+    var socket = io();
 
-    <div class="gauge-container">
-        <h3>Humidity</h3>
-        <div id="humVal" class="val-text">-- %</div>
-    </div>
-
-    <div class="gauge-container">
-        <h3>PM2.5</h3>
-        <div id="pmVal" class="val-text">-- µg/m³</div>
-    </div>
-
-    <div id="chartContainer">
-        <canvas id="sensorChart"></canvas>
-    </div>
-
-    <script>
-        const socket = io.connect('http://localhost:5000');  // เชื่อมต่อกับเซิร์ฟเวอร์
-
-        // ตัวแปรสำหรับเก็บข้อมูลล่าสุดที่รับจากเซ็นเซอร์
-        let temperatureData = [];
-        let humidityData = [];
-        let pmData = [];
-
-        // สร้างกราฟด้วย Chart.js
-        const ctx = document.getElementById('sensorChart').getContext('2d');
-        const sensorChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],  // เวลา หรือช่วงเวลาที่ข้อมูลถูกบันทึก
-                datasets: [{
-                    label: 'Temperature (°C)',
-                    data: temperatureData,
-                    borderColor: 'rgb(255, 99, 132)',
-                    fill: false
-                }, {
-                    label: 'Humidity (%)',
-                    data: humidityData,
-                    borderColor: 'rgb(54, 162, 235)',
-                    fill: false
-                }, {
-                    label: 'PM2.5 (µg/m³)',
-                    data: pmData,
-                    borderColor: 'rgb(75, 192, 192)',
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                    },
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        // เมื่อรับข้อมูลจาก server ผ่าน socket.io
-        socket.on('sensor_update', (data) => {
-            const temp = data.temperature || 0;
-            const hum = data.humidity || 0;
-            const pm = data.pm || 0;
-            const time = Date.now();
-
-            // แสดงผลข้อมูลในตัวเลข
-            document.getElementById("tempVal").innerText = `${temp} °C`;
-            document.getElementById("humVal").innerText = `${hum} %`;
-            document.getElementById("pmVal").innerText = `${pm} µg/m³`;
-
-            // เพิ่มข้อมูลใหม่ในกราฟ
-            sensorChart.data.labels.push(time);  // เพิ่มเวลา
-            sensorChart.data.datasets[0].data.push(temp);  // อุณหภูมิ
-            sensorChart.data.datasets[1].data.push(hum);  // ความชื้น
-            sensorChart.data.datasets[2].data.push(pm);   // PM2.5
-
-            // กำหนดให้กราฟไม่เก็บข้อมูลเกินไป (รักษาขนาดของกราฟให้เหมาะสม)
-            if (sensorChart.data.labels.length > 50) {
-                sensorChart.data.labels.shift();
-                sensorChart.data.datasets.forEach(dataset => dataset.data.shift());
-            }
-
-            sensorChart.update();
-        });
-    </script>
+    socket.on('sensor_update', function(data) {
+      document.getElementById("temperature").innerText = "Temperature: " + data.temperature + " °C";
+      document.getElementById("humidity").innerText = "Humidity: " + data.humidity + " %";
+      document.getElementById("pm25").innerText = "PM2.5: " + data.pm25 + " µg/m³";
+    });
+  </script>
 </body>
 </html>
